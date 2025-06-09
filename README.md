@@ -1,10 +1,10 @@
-# Exploiting "Morning Catch": from Phishing to Double Extorsion
+# Exploiting "Morning Catch": from Phishing to Double Extortion
 
 ## Introduction
 
 ### Scenario
 
-This laboratory describes a Spearphishing attack to a company CEO with the purpose of stealing credentials, accessing the system and then stealing sensitive information for Double Extorsion.
+This laboratory describes a Spearphishing attack to a company CEO with the purpose of stealing credentials, accessing the system and then stealing sensitive information for Double Extortion.
 
 **Threat model:** attacker has access to the network from the inside.
 
@@ -294,7 +294,7 @@ Then lastly on the victim machine:
 
 ```bash
 rm -r Documents/*
-echo "ATTENTION: we have your sensitive data (SSN, credit card). The originals were deleted. Pay 5.0 BTC to bc1adfka3flasjdlks2mdl0asmd. YOU HAVE 72 HOURS." > Documents/README.txt
+echo "ATTENTION: we have your sensitive data (SSN, credit card). The originals were deleted. Pay 5.0 BTC to bc1adfka3flasjdlks2mdl0asmd. YOU HAVE 72 HOURS." > Documents/!_READ_FILES_STOLEN_!.txt
 ```
 
 So the attacker successfully exfiltrated the sensitive data and deleted the original files from the victim's system, leaving a ransom note behind. The attack is completed!
