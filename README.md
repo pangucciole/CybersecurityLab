@@ -96,7 +96,7 @@ The idea for realizing the first phase is to clone the entire website and create
 
 #### 1.2. Cloning
 
-The attacker firstly clones the entire Morning Catch website, using `wget`. 
+The attacker firstly clones the entire Morning Catch website, using `wget`. Then all is moved to the root directory of Apache.
 
 ```bash
 wget -r -k -p morningcatch.ph
@@ -110,10 +110,7 @@ The attacker then clones the web login page to access mail of Morning Catch. Thi
 ```bash
 wget -r -k -p morningcatch/mail/
 sudo mv morningcatch.ph/mail /var/www/html
-sudo cp task-mail /var/www/mail
 ```
-
-The last line adds to the mail directory the html file `task-mail`, that will be loaded after inserting the credentials, showing a "Under construction message" to reduce immediate suspicion.
 
 #### 1.3. Modify the login form
 
@@ -121,7 +118,10 @@ The attacker modifies, in the `mail/index.html` file, the form action element fr
 
 ```bash
 sudo nano /var/www/html/mail/index.html
+sudo cp task-mail /var/www/html/mail
 ```
+
+The second line adds to the directory the html file `task-mail`, that will be loaded after inserting the credentials, showing a "Under construction message" to reduce immediate suspicion.
 
 The `form.php` needs to:
 
