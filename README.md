@@ -223,7 +223,9 @@ Boyd
 quit
 ```
 
-**Note:** This spoofing step is possible due to the vulnerable Sendmail server, configured to allow unauthenticated relaying from internal network addresses.
+> [!NOTE]
+>
+> This spoofing step is possible due to the vulnerable Sendmail server, configured to allow unauthenticated relaying from internal network addresses.
 
 ###### Richard POV
 
@@ -280,7 +282,9 @@ eval "$SAFETYCOM"
 * The errors of the crontab are ignored to avoid leaving any obvious traces;
 * The cronjob is executed at every reboot of the system, after waiting 200 seconds (for giving the system time to set up propely).
 
-**Note:** the cronjob will be executed with the privileges of the user that executes `innocent.sh`.
+> [!NOTE]
+>
+> The cronjob will be executed with the privileges of the user that executes `innocent.sh`.
 
 ###### Server
 
@@ -309,7 +313,9 @@ The attacker has successfully obtained a remote shell with `root` privileges tha
 
 <img src="images/root.png" alt="Screenshot 2025-06-08 alle 15.40.13 " style="zoom:50%;" />
 
-**Note:** While `rbourne` had sufficient privileges to execute the final step of this attack, this persistent reverse shell has system wide access and could be used for potential future attacks. Furthermore, the CEO might not even realize it exists, since he will be distracted by the missing files.
+> [!NOTE]
+>
+> While `rbourne` had sufficient privileges to execute the final step of this attack, this persistent reverse shell has system wide access and could be used for potential future attacks. Furthermore, the CEO might not even realize it exists, since he will be distracted by the missing files.
 
 #### 2.3. Stealing the files
 
