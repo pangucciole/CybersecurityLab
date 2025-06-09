@@ -162,7 +162,7 @@ Now the website is on, ready to steal some credentials!
 
 #### 1.4. Sending the message
 
-The attacker crafts the email for the target:
+The attacker crafts the email for the target, by connecting to the SMTP server (identified earlier with `nmap`) using `telnet`. 
 
 ```bash
 telnet morningcatch.ph 25
