@@ -37,9 +37,11 @@ On the Victim VM:
 <Attacker IP> mornincatch.ph
 ```
 
+This edit in the files is optional, but it makes the process easier to run.
+
 #### SMTP
 
-To make the phishing attack work, I had to give `RELAY` rights to the private subnet (and therefore to the attacker machine), by whitelisting these lines in `/etc/mail/access`:
+I had to give `RELAY` rights to the private subnet (and therefore to the attacker machine), by whitelisting these lines in `/etc/mail/access` in the Morning Catch machine:
 
 ```
 Connect: 192.168	  RELAY
@@ -47,6 +49,8 @@ GreetPause: 192.168	0
 ClientRate: 192.168	0
 ClientConn: 192.168	0
 ```
+
+This step is necessary to make the phishing attack work, otherwise the Sendmail service will refuse any message from anyone in the network, because of default configurations.
 
 #### Tools
 
